@@ -60,6 +60,7 @@ uint8_t SerialNumberSetChannelId::getDataLength() {
 
 uint32_t SerialNumberSetChannelId::execute() {
     // TODO
+    Serial.println(__FILE__);Serial.println(__FUNCTION__);
     return 0;
 }
 

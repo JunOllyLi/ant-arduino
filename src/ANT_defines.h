@@ -280,5 +280,8 @@
   #include "ant_interface.h"
   #define NATIVE_API_AVAILABLE
 #endif
-
+#define NATIVE_API_AVAILABLE
+#include <ant_interface.h>
+#include <Arduino.h>
+#define JLDEBUG
 #endif // ANT_DEFINES_h

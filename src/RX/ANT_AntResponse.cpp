@@ -95,7 +95,6 @@ void AntResponse::getCapabilitiesMsg(AntResponse &response) {
     // pass pointer array to subclass
     cap->setFrameData(getFrameData());
     setCommon(response);
-
 }
 
 void AntResponse::getAdvancedBurstDataMsg(AntResponse &response) {

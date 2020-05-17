@@ -53,6 +53,7 @@ uint8_t ConfigureSelectiveDataUpdates::getDataLength() {
 
 uint32_t ConfigureSelectiveDataUpdates::execute() {
     // TODO
+    Serial.println(__FILE__);Serial.println(__FUNCTION__);
     return 0;
 }
 

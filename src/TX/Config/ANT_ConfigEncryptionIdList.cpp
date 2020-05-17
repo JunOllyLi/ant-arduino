@@ -54,6 +54,7 @@ uint8_t ConfigEncryptionIdList::getDataLength() {
 
 uint32_t ConfigEncryptionIdList::execute() {
     // TODO
+    Serial.println(__FILE__);Serial.println(__FUNCTION__);
     return 0;
 }
 

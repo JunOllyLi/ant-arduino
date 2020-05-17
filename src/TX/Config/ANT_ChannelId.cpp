@@ -66,6 +66,7 @@ uint8_t ChannelId::getDataLength() {
 }
 
 uint8_t ChannelId::getData(uint8_t pos) {
+    Serial.println(__FILE__);Serial.println(__FUNCTION__);
     if (pos == 0) {
         return _channel;
     } else if (pos == 1) {
