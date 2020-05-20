@@ -56,8 +56,11 @@ public:
      */
     void send(AntRequest &request);
 private:
+    void read_softdevice_event();
+    void native_api_event();
     uint8_t _responseFrameData[MESG_BUFFER_SIZE + 4]; // TODO
     uint8_t reqmsgid;
+    uint8_t req_subid;
 };
 
 #endif // NATIVE_API_AVAILABLE

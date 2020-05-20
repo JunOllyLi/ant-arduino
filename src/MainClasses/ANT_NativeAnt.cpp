@@ -59,12 +59,7 @@ void NativeAnt::begin(){
 #endif
 }
 
-void NativeAnt::readPacket(){
-    // reset previous response
-    if (getResponse().isAvailable() || getResponse().isError()) {
-        // discard previous packet and start over
-        getResponse().reset();
-    }
+void NativeAnt::read_softdevice_event() {
     ANT_MESSAGE antMsg;
     uint8_t ucChannel;
     uint8_t ucEvent;
@@ -73,9 +68,9 @@ void NativeAnt::readPacket(){
         switch (ucEvent) {
         case EVENT_TX:
         case EVENT_TRANSFER_TX_COMPLETED:
-            _responseFrameData[1] = ucChannel;
+            _responseFrameData[0] = ucChannel;
             _responseFrameData[1] = 1; //ANTPLUS_CHANNELEVENT_MESSAGECODE
-            _responseFrameData[1] = ucEvent;
+            _responseFrameData[2] = ucEvent;
             getResponse().setLength(3);
             getResponse().setMsgId(CHANNEL_EVENT);
             getResponse().setErrorCode(NO_ERROR);
@@ -87,12 +82,7 @@ void NativeAnt::readPacket(){
             getResponse().setLength(antMsg.stMessage.ucSize);
             switch (antMsg.stMessage.uFramedData.stFramedData.ucMesgID) {
             case MESG_BROADCAST_DATA_ID:
-                Serial.println("====BROADCAST_DATA");
                 getResponse().setMsgId(BROADCAST_DATA);
-                break;
-            case MESG_CHANNEL_ID_ID:
-                Serial.print("Channel ID ");Serial.println(reqmsgid);
-                getResponse().setMsgId(CHANNEL_ID);
                 break;
             default:
                 Serial.print("------unhandled ANT msg type ");
@@ -110,36 +100,85 @@ void NativeAnt::readPacket(){
     }
 }
 
-void NativeAnt::send(AntRequest &request){
+void NativeAnt::native_api_event() {
+    // requests handled by native API
+    uint8_t ret = 0;
+    switch (reqmsgid) {
+    case CAPABILITIES:
+        ret = sd_ant_capabilities_get(_responseFrameData);
+        getResponse().setLength(8);
+        getResponse().setMsgId(CAPABILITIES);
+        getResponse().setErrorCode(NO_ERROR);
+        getResponse().setAvailable(true);
+#ifdef JLDEBUG
+        if (NRF_SUCCESS != ret)
+        {
+            Serial.print("sd_ant_capabilities_get returned ");
+            Serial.println(ret);
+        }
+        else
+        {
+            Serial.print("ANT Max Channel: ");
+            Serial.println(_responseFrameData[0]);
+            Serial.print("ANT Max Network: ");
+            Serial.println(_responseFrameData[1]);
+        }
+#endif
+        break;
+    case ANT_VERSION:
+        ret = sd_ant_version_get(_responseFrameData);
+        getResponse().setMsgId(ANT_VERSION);
+        getResponse().setErrorCode(NO_ERROR);
+        getResponse().setAvailable(true);
+#ifdef JLDEBUG
+        Serial.print("ANT_VERSION ");Serial.println((const char *)_responseFrameData);
+#endif
+        break;
+    case CHANNEL_STATUS:
+        ret = sd_ant_channel_status_get(req_subid, _responseFrameData);
+        getResponse().setLength(1);
+        getResponse().setMsgId(CHANNEL_STATUS);
+        getResponse().setErrorCode(NO_ERROR);
+        getResponse().setAvailable(true);
+        break;
+    case CHANNEL_ID:
+        ret = sd_ant_channel_id_get(req_subid, (uint16_t*)&_responseFrameData[1],
+                &_responseFrameData[3], &_responseFrameData[4]);
+        _responseFrameData[0] = req_subid;
+
+        getResponse().setLength(5);
+        getResponse().setMsgId(CHANNEL_ID);
+        getResponse().setErrorCode(NO_ERROR);
+        getResponse().setAvailable(true);
+        break;
+    default:
+        Serial.print("=====unhandled request msg 0x");
+        Serial.println(reqmsgid, HEX);
+        break;
+    }
+}
+
+void NativeAnt::readPacket(){
+    // reset previous response
+    if (getResponse().isAvailable() || getResponse().isError()) {
+        // discard previous packet and start over
+        getResponse().reset();
+    }
+
+    if (0 != reqmsgid) {
+        native_api_event();
+        reqmsgid = 0;
+    } else {
+        // read ANT events
+        read_softdevice_event();
+    }
+}
+
+void NativeAnt::send(AntRequest& request){
     uint8_t ret = 0;
     if (REQUEST_MESSAGE == request.getMsgId()) {
         reqmsgid = request.getData(1);
-        switch (reqmsgid) {
-        case CAPABILITIES:
-            ret = sd_ant_capabilities_get(_responseFrameData);
-            getResponse().setLength(8);
-            getResponse().setMsgId(CAPABILITIES);
-            getResponse().setErrorCode(NO_ERROR);
-            getResponse().setAvailable(true);
-#ifdef JLDEBUG
-            if (NRF_SUCCESS != ret) {
-                Serial.print("sd_ant_capabilities_get returned ");Serial.println(ret);
-            } else {
-                Serial.print("ANT Max Channel: ");Serial.println(_responseFrameData[0]);
-                Serial.print("ANT Max Network: ");Serial.println(_responseFrameData[1]);
-            }
-#endif
-            break;
-        case ANT_VERSION:
-            Serial.println("=====ANT_VER");
-            break;
-        case CHANNEL_STATUS:
-            Serial.println("======CHAN STATUS");
-            break;
-        default:
-            Serial.print("=====unknown ");Serial.println(reqmsgid, HEX);
-            break;
-        }
+        req_subid = request.getData(0);
     } else {
         request.execute();
     }
